@@ -1,0 +1,84 @@
+$schema: http://json-schema.org/draft-07/schema#
+title: Vehicle
+type: object
+properties:
+  id:
+    type: string
+    pattern: "^[0-9a-fA-F]{24}$"
+  make:
+    type: string
+    minLength: 1
+    maxLength: 50
+  model:
+    type: string
+    minLength: 1
+    maxLength: 50
+  year:
+    type: integer
+    minimum: 1886
+  color:
+    type: string
+    enum:
+      - red
+      - blue
+      - black
+      - white
+      - silver
+  owners:
+    type: array
+    items:
+      $ref: '#/definitions/Person'
+    minItems: 1
+    maxItems: 10
+  type:
+    type: string
+    discriminator:
+      propertyName: vehicleType
+  vehicleType:
+    anyOf:
+      - $ref: '#/definitions/Car'
+      - $ref: '#/definitions/Motorcycle'
+additionalProperties: false
+required:
+  - id
+  - make
+  - model
+  - year
+  - color
+  - owners
+  - type
+  - vehicleType
+definitions:
+  Person:
+    type: object
+    properties:
+      firstName:
+        type: string
+      lastName:
+        type: string
+    required:
+      - firstName
+      - lastName
+  Car:
+    type: object
+    properties:
+      seatingCapacity:
+        type: integer
+        minimum: 1
+      fuelType:
+        type: string
+        enum:
+          - petrol
+          - diesel
+          - electric
+    required:
+      - seatingCapacity
+      - fuelType
+  Motorcycle:
+    type: object
+    properties:
+      engineCapacity:
+        type: integer
+        minimum: 50
+    required:
+      - engineCapacity
