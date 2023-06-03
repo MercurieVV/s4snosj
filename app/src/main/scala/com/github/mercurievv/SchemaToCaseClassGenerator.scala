@@ -2,7 +2,7 @@ package com.github.mercurievv
 
 import io.circe
 import cats.implicits.*
-import RegularDefinition.given.given
+import RegularDefinition.given
 
 object SchemaToCaseClassGenerator:
 

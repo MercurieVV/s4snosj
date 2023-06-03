@@ -5,6 +5,7 @@ import cats.implicits.*
 import com.github.mercurievv.*
 import io.circe.*
 import io.circe.Decoder.Result
+import io.circe.Encoder.AsArray
 import io.circe.generic.semiauto.*
 
 case class Root(
@@ -74,6 +75,16 @@ object RegularDefinition:
   type ReferenceOrSchema = Reference | RegularDefinition
   given Decoder[ReferenceOrSchema] =
     Decoder[Reference].map(p => p: ReferenceOrSchema).or(Decoder[RegularDefinition].map(p => p: ReferenceOrSchema))
+
+  val allOfEncoder: Encoder[AllOf] =
+    import io.circe.syntax.*
+    val encodeRefs = Encoder.encodeNonEmptyList[Reference].contramapArray[AllOf](_._1)
+    val encodeDef = Encoder.encodeList[RegularDefinition].contramapArray[AllOf](_._2.toList)
+    (a: AllOf) => {
+        val personJson = a._1.asJson
+        val addressJson = a._2.asJson
+        personJson.deepMerge(addressJson)
+      }
 
   val allOfDecoder: Decoder[AllOf] = Decoder
     .decodeNonEmptyList[ReferenceOrSchema]
