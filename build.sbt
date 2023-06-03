@@ -34,19 +34,25 @@ fork := true
 val commonSettings = Seq(
   Compile / compile / wartremoverErrors ++= Warts.allBut(wartExclusionsMain: _*),
   Compile / test / wartremoverErrors ++= Warts.allBut(wartExclusionsTest: _*),
+  libraryDependencies += "com.disneystreaming" %% "weaver-cats" % "0.8.3" % Test,
+  testFrameworks += new TestFramework("weaver.framework.CatsEffect"),
 )
-
 
 lazy val root = (project in file("app"))
   .enablePlugins(WartRemover)
   .settings(commonSettings)
   .settings(
-    name := "s4snosj",
+    name := "s4snosj"
   )
   .settings(
     libraryDependencies ++= Seq(
       Cats.Effect,
       Logging.Logback,
       Logging.Slf4jApi,
+      Testing.magnolia,
+      Testing.scalacheck,
+      Testing.catsScalacheck,
+      Testing.weaver,
+      Testing.weaverScalacheck,
     ) ++ Circe.All
   )

@@ -19,8 +19,9 @@ case class JsonSchemaXOf(
     oneOf: Option[AllOf],
 )
 extension (a: JsonSchemaXOf)
+  def isValid: Boolean = a.oneOf.isDefined || a.anyOf.isDefined || a.allOf.isDefined
   def validate: Either[String, JsonSchemaXOf] = Either.cond(
-    a.oneOf.isDefined || a.anyOf.isDefined || a.allOf.isDefined,
+    isValid,
     a,
     "'allOf', 'anyOf', 'oneOf' - none of this field is defined",
   )
@@ -104,7 +105,7 @@ object RegularDefinition:
 
   given Codec[AllOf] = Codec.from(
     allOfDecoder,
-    null,
+    allOfEncoder,
   )
 
   given Codec[RegularProperty] = deriveCodec

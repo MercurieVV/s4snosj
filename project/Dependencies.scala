@@ -28,4 +28,12 @@ object Dependencies {
     val Slf4jApi = "org.slf4j"       % "slf4j-api"       % slf4jversion
     val Logback  = ("ch.qos.logback" % "logback-classic" % logbackVersion).exclude("org.slf4j", "slf4j")
   }
+
+  object Testing{
+    val scalacheck = "org.scalacheck" %% "scalacheck" % "1.17.0" % Test
+    val magnolia = "com.softwaremill.magnolia1_3" %% "magnolia" % "1.3.0" % Test
+    val catsScalacheck = "io.chrisdavenport" %% "cats-scalacheck" % "0.3.2" % Test
+    val weaver = "com.disneystreaming" %% "weaver-framework" % "0.8.3" % Test
+    val weaverScalacheck = "com.disneystreaming" %% "weaver-scalacheck" % "0.8.3" % Test
+  }
 }
