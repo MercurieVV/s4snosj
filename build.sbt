@@ -47,12 +47,15 @@ lazy val root = (project in file("app"))
   .settings(
     libraryDependencies ++= Seq(
       Cats.Effect,
+      Fs2.core,
+      Fs2.io,
       Logging.Logback,
       Logging.Slf4jApi,
       Testing.magnolia,
       Testing.scalacheck,
       Testing.catsScalacheck,
       Testing.weaver,
+      Testing.weaverCats,
       Testing.weaverScalacheck,
     ) ++ Circe.All
   )

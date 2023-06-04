@@ -34,10 +34,6 @@ properties:
     type: string
     discriminator:
       propertyName: vehicleType
-  vehicleType:
-    anyOf:
-      - $ref: '#/definitions/Car'
-      - $ref: '#/definitions/Motorcycle'
 additionalProperties: false
 required:
   - id
@@ -47,38 +43,3 @@ required:
   - color
   - owners
   - type
-  - vehicleType
-definitions:
-  Person:
-    type: object
-    properties:
-      firstName:
-        type: string
-      lastName:
-        type: string
-    required:
-      - firstName
-      - lastName
-  Car:
-    type: object
-    properties:
-      seatingCapacity:
-        type: integer
-        minimum: 1
-      fuelType:
-        type: string
-        enum:
-          - petrol
-          - diesel
-          - electric
-    required:
-      - seatingCapacity
-      - fuelType
-  Motorcycle:
-    type: object
-    properties:
-      engineCapacity:
-        type: integer
-        minimum: 50
-    required:
-      - engineCapacity

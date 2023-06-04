@@ -9,6 +9,13 @@ object Dependencies {
     val Core                  = "org.typelevel" %% "cats-core"   % catsVersion
     val Effect                = "org.typelevel" %% "cats-effect" % effectVersion
   }
+  
+  object Fs2{
+    private val ver = "3.6.1"
+    val core = "co.fs2" %% "fs2-core" % ver
+    val io = "co.fs2" %% "fs2-io" % ver
+
+  }
 
   object Circe {
     private val circeVersion = "0.14.5"
@@ -34,6 +41,7 @@ object Dependencies {
     val magnolia = "com.softwaremill.magnolia1_3" %% "magnolia" % "1.3.0" % Test
     val catsScalacheck = "io.chrisdavenport" %% "cats-scalacheck" % "0.3.2" % Test
     val weaver = "com.disneystreaming" %% "weaver-framework" % "0.8.3" % Test
-    val weaverScalacheck = "com.disneystreaming" %% "weaver-scalacheck" % "0.8.3" % Test
+    val weaverCats = "com.disneystreaming" %% "weaver-cats" % "0.8.1" % Test
+    val weaverScalacheck = "com.disneystreaming" %% "weaver-scalacheck" % "0.8.1" % Test
   }
 }
