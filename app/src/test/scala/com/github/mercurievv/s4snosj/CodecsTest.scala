@@ -33,8 +33,8 @@ object CodecsTest extends SimpleIOSuite with Checkers:
   given [T: Arbitrary]: Arbitrary[NonEmptyList[T]] =
     val arb: Gen[T] = summon[Arbitrary[T]].arbitrary
     (arb, Gen.listOf(arb)).mapN((h: T, t: List[T]) => NonEmptyList.apply(h, t)).toArbitrary
-  given Arbitrary[JsonSchemaXOf] = ScalacheckDerivation.ArbitraryDer.derived[JsonSchemaXOf].toArbitrary
-  given Arbitrary[Definition] = Gen.either(summon[Arbitrary[RegularDefinition]].arbitrary, summon[Arbitrary[JsonSchemaXOf]].arbitrary.filter(_.isValid)).toArbitrary
+  given Arbitrary[XOf] = ScalacheckDerivation.ArbitraryDer.derived[XOf].toArbitrary
+  given Arbitrary[Definition] = Gen.either(summon[Arbitrary[RegularDefinition]].arbitrary, summon[Arbitrary[XOf]].arbitrary.filter(_.isValid)).toArbitrary
 
   val rootGen: Arbitrary[Root]   = ScalacheckDerivation.ArbitraryDer.derived[Root].toArbitrary
   test("Json encoding and decoding should preserve data integrity") {

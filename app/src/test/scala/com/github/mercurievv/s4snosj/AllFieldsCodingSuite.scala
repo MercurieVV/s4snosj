@@ -33,15 +33,15 @@ object AllFieldsCodingSuite extends SimpleIOSuite:
   test("Load a file from resources") {
     val resourceName = "/jsonschema/test1.yaml"
     val lines = readResource(resourceName).compile.toList
-//    given Eq[Json] = new Eq[Json]:
-//      override def eqv(x:  Json, y:  Json): Boolean = x.noSpacesSortKeys
     lines
       .map(_.mkString("\n"))
       .map(v =>
         val fromStr = parser.parse(v)
         val obj = fromStr.flatMap(_.as[RegularDefinition])
         val fromObj = obj.map(_.asJson)
-        expect(fromStr.isRight).and(expect(fromObj.isRight)).and(expect.eql(removeOrdering(fromStr), removeOrdering(fromObj)))
+        expect(fromStr.isRight)
+          .and(expect(fromObj.isRight))
+          .and(expect.eql(removeOrdering(fromStr), removeOrdering(fromObj)))
       )
   }
 

@@ -9,22 +9,17 @@ import io.circe.Encoder.AsArray
 import io.circe.generic.semiauto.*
 
 case class Root(
-    definitions: Map[String, Definition]
+    definitions: Map[DefinitionName, Definition]
 )
-type Definition = Either[RegularDefinition, JsonSchemaXOf]
+type Definition = Either[RegularDefinition, XOf]
+type DefinitionName = String
 
-case class JsonSchemaXOf(
+case class XOf(
     allOf: Option[AllOf],
     anyOf: Option[AllOf],
     oneOf: Option[AllOf],
 )
-extension (a: JsonSchemaXOf)
-  def isValid: Boolean = a.oneOf.isDefined || a.anyOf.isDefined || a.allOf.isDefined
-  def validate: Either[String, JsonSchemaXOf] = Either.cond(
-    isValid,
-    a,
-    "'allOf', 'anyOf', 'oneOf' - none of this field is defined",
-  )
+type AllOf   = (NonEmptyList[Reference], Option[RegularDefinition])
 
 type Type         = String
 type PropertyName = String
@@ -32,28 +27,50 @@ case class RegularDefinition(
     `$id`: Option[String],
     `$schema`: Option[String],
     `type`: Type,
+    title: Option[String],
     properties: Map[PropertyName, Property],
     required: Option[List[PropertyName]],
     description: Option[String],
     discriminator: Option[Discriminator],
+    definitions: Option[Map[DefinitionName, Definition]],
+    additionalProperties: Option[Boolean],
 )
 
 type DiscriminatorKey = String
 case class Discriminator(
     propertyName: PropertyName,
-    mapping: Map[DiscriminatorKey, RefPath],
+    mapping: Option[Map[DiscriminatorKey, RefPath]],
 )
 
-type AllOf   = (NonEmptyList[Reference], Option[RegularDefinition])
 type RefPath = String
 case class Reference(`$ref`: RefPath)
-case class RegularProperty(`type`: Type, description: Option[String])
+case class RegularProperty(
+    `type`: Type,
+    description: Option[String],
+    `enum`: Option[List[String]],
+    pattern: Option[String],
+    minLength: Option[Int],
+    maxLength: Option[Int],
+    minItems: Option[Int],
+    maxItems: Option[Int],
+    minimum: Option[Int],
+    items: Option[Reference],
+    discriminator: Option[Discriminator],
+)
 
-type Property = Reference | RegularProperty
+type Property = Reference | RegularProperty | XOf
+
+extension (a: XOf)
+  def isValid: Boolean = a.oneOf.isDefined || a.anyOf.isDefined || a.allOf.isDefined
+  def validate: Either[String, XOf] = Either.cond(
+    isValid,
+    a,
+    "'allOf', 'anyOf', 'oneOf' - none of this field is defined",
+  )
 
 extension (a: Property)
   def typeName(schema: Root): String = a match
-    case RegularProperty(tpe, description) => tpe
+    case v: RegularProperty => v.`type`
     case Reference(ref) =>
       val refSchema = schema.definitions
         .getOrElse(
@@ -62,9 +79,10 @@ extension (a: Property)
         )
       // refSchema.`type`
       "Ololo"
+    case _ => ""
 
 object RegularDefinition:
-  given Codec[JsonSchemaXOf] = deriveCodec[JsonSchemaXOf].iemap(_.validate)(identity)
+  given Codec[XOf] = deriveCodec[XOf].iemap(_.validate)(identity)
   given Codec[Definition]    = EitherAuto.eitherCodec
 
   given Codec[Root] = deriveCodec
@@ -80,12 +98,12 @@ object RegularDefinition:
   val allOfEncoder: Encoder[AllOf] =
     import io.circe.syntax.*
     val encodeRefs = Encoder.encodeNonEmptyList[Reference].contramapArray[AllOf](_._1)
-    val encodeDef = Encoder.encodeList[RegularDefinition].contramapArray[AllOf](_._2.toList)
+    val encodeDef  = Encoder.encodeList[RegularDefinition].contramapArray[AllOf](_._2.toList)
     (a: AllOf) => {
-        val personJson = a._1.asJson
-        val addressJson = a._2.asJson
-        personJson.deepMerge(addressJson)
-      }
+      val personJson  = a._1.asJson
+      val addressJson = a._2.asJson
+      personJson.deepMerge(addressJson)
+    }
 
   val allOfDecoder: Decoder[AllOf] = Decoder
     .decodeNonEmptyList[ReferenceOrSchema]
@@ -112,10 +130,11 @@ object RegularDefinition:
 
   given Codec[Reference] = deriveCodec
 
-  implicit val propertyDecoder: Decoder[Property] = Decoder[RegularProperty].widen.or(Decoder[Reference].widen)
+  implicit val propertyDecoder: Decoder[Property] = Decoder[Reference].widen.or(Decoder[RegularProperty].widen)
   implicit val propertyEncoder: Encoder[Property] = Encoder.instance {
     case regularProperty: RegularProperty => Encoder[RegularProperty].apply(regularProperty)
     case refProperty: Reference           => Encoder[Reference].apply(refProperty)
+    case XOf(_, _, _) => ???
   }
 
 object EitherAuto:
