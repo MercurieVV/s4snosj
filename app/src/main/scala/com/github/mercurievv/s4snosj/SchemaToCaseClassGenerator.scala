@@ -1,7 +1,7 @@
 package com.github.mercurievv.s4snosj
 
 import cats.implicits.*
-import com.github.mercurievv.s4snosj.RegularDefinition.given
+import com.github.mercurievv.s4snosj.SimpleDefinitionCodecs.given
 import com.github.mercurievv.given
 import io.circe
 
@@ -17,13 +17,13 @@ object SchemaToCaseClassGenerator:
     generate(schema)(v)
   }).mkString("\n")*/
 
-  def generate(root: Root)(schema: RegularDefinition): String =
-    val className = schema.`$id`.getOrElse("GeneratedClass")
-    val fields = schema.properties
+  def generate(root: Root)(schema: SimpleDefinition): String =
+    val className = schema.common.`$id`.getOrElse("GeneratedClass")
+    val fields = ??? /*schema.properties
       .map { case (name, property) =>
         ??? //s"  $name: ${typeMapping(property.typeName(root))}"
       }
-      .mkString(",\n")
+      .mkString(",\n")*/
 
     s"""case class $className(
        |$fields

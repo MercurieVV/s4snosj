@@ -32,12 +32,10 @@ properties:
     maxItems: 10
   type:
     type: string
-    discriminator:
-      propertyName: vehicleType
-#  vehicleType:
-#    anyOf:
-#      - $ref: '#/definitions/Car'
-#      - $ref: '#/definitions/Motorcycle'
+  vehicleType:
+    anyOf:
+      - $ref: '#/definitions/Car'
+      - $ref: '#/definitions/Motorcycle'
 additionalProperties: false
 required:
   - id

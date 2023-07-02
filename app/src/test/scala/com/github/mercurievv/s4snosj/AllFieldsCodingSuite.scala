@@ -16,6 +16,7 @@ import fs2.io.file.Path
 import weaver.SimpleIOSuite
 
 import java.nio.file.*
+import SimpleDefinitionCodecs.given_Codec_SimpleDefinition
 
 def removeOrdering(fromStr: Either[Error, Json]) = {
   val errorOrString = fromStr.map(_.deepDropNullValues.spaces2SortKeys)
@@ -37,11 +38,13 @@ object AllFieldsCodingSuite extends SimpleIOSuite:
       .map(_.mkString("\n"))
       .map(v =>
         val fromStr = parser.parse(v)
-        val obj = fromStr.flatMap(_.as[RegularDefinition])
+        val obj = fromStr.flatMap(_.as[SimpleDefinition])
         val fromObj = obj.map(_.asJson)
+        val errorOrJson = removeOrdering(fromStr)
+        val errorOrJson1 = removeOrdering(fromObj)
         expect(fromStr.isRight)
           .and(expect(fromObj.isRight))
-          .and(expect.eql(removeOrdering(fromStr), removeOrdering(fromObj)))
+          .and(expect.eql(errorOrJson, errorOrJson1))
       )
   }
 
