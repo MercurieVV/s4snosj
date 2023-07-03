@@ -44,6 +44,7 @@ object AllFieldsCodingSuite extends SimpleIOSuite:
         val errorOrJson1 = removeOrdering(fromObj)
         expect(fromStr.isRight)
           .and(expect(fromObj.isRight))
+          .and(expect(fromStr.isRight))
           .and(expect.eql(errorOrJson, errorOrJson1))
       )
   }

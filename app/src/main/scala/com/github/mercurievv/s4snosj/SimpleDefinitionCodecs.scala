@@ -10,8 +10,10 @@ import io.circe.*
 import io.circe.Decoder.Result
 import io.circe.Encoder.AsArray
 import io.circe.cursor.ObjectCursor
-import io.circe.derivation.{Configuration, ConfiguredEnumCodec}
+import io.circe.derivation.{Configuration, ConfiguredCodec, ConfiguredEnumCodec}
 import io.circe.generic.semiauto.*
+
+import scala.reflect.{ClassTag, classTag}
 
 case class Root(
     definitions: Map[DefinitionName, Definition]
@@ -77,7 +79,25 @@ enum SimpleDefinition(
       items: Option[Reference],
   ) extends SimpleDefinition(common)
 
+type SimpleDefinitionByType[T <: Type] = T match
+  case Type.number.type   => SimpleDefinition.Number.type
+  case Type.integer.type  => SimpleDefinition.Number
+  case Type.array.type    => SimpleDefinition.ArrayT.type
+  case Type.string.type   => SimpleDefinition.StringT.type
+  case Type.`object`.type => SimpleDefinition.Object.type
+
 type Property = Reference | SimpleDefinition | XOf
+
+def simpleDefinitionByType[T <: Type](t: T): ClassTag[SimpleDefinition] =
+  def mapToSD[SD <: SimpleDefinition](implicit tag: ClassTag[SD]): ClassTag[SimpleDefinition] =
+    ClassTag[SimpleDefinition](tag.runtimeClass)
+
+  t match
+    case Type.number   => mapToSD[SimpleDefinition.Number]
+    case Type.integer  => mapToSD[SimpleDefinition.Number]
+    case Type.array    => mapToSD[SimpleDefinition.ArrayT]
+    case Type.string   => mapToSD[SimpleDefinition.StringT]
+    case Type.`object` => mapToSD[SimpleDefinition.Object]
 
 extension (a: XOf)
   def isValid: Boolean = a.oneOf.isDefined || a.anyOf.isDefined || a.allOf.isDefined
@@ -105,7 +125,7 @@ import io.circe.jawn.decode
 import io.circe.Json
 
 object SimpleDefinitionCodecs:
-  given Codec[Type] = ConfiguredEnumCodec.derive()
+  given Codec[Type]                        = ConfiguredEnumCodec.derive()
   given Codec[XOf]                         = deriveCodec[XOf].iemap(_.validate)(identity)
   given Codec[SimpleDefinition Either XOf] = EitherAuto.eitherCodec
   given Codec[Definition]                  = EitherAuto.eitherCodec
@@ -114,43 +134,21 @@ object SimpleDefinitionCodecs:
 
   given Codec[Discriminator] = deriveCodec
 
+  private val simpleDefinitionByTypeMap: Map[String, String] =
+    Type.values.toList
+      .fproduct(simpleDefinitionByType)
+      .map(_.swap)
+      .map((ct, typ) => ct.runtimeClass.getSimpleName -> typ.toString)
+      .toMap
+
+
   given Codec[SimpleDefinition] =
     given common: Codec[SimpleDefinition.RegularPropertyCommon] = deriveCodec
+    given Codec[SimpleDefinition] =
+      ConfiguredCodec.derive(transformConstructorNames = simpleDefinitionByTypeMap, discriminator = "type".some)
 
-    def transformCodec(
-        common: SimpleDefinition.RegularPropertyCommon
-    )(c: HCursor)(usual: Decoder[SimpleDefinition]): Decoder[SimpleDefinition] =
-      usual.prepare(_.withFocus(_.mapObject(_.add("common", common.asJson))))
-
-    def getDecoder(t: Type): Decoder[SimpleDefinition] =
-      t match
-        case Type.string   => deriveDecoder[SimpleDefinition.StringT].widen
-        case Type.number   => deriveDecoder[SimpleDefinition.Number].widen
-        case Type.integer   => deriveDecoder[SimpleDefinition.Number].widen
-        case Type.array    => deriveDecoder[SimpleDefinition.ArrayT].widen
-        case Type.`object` => deriveDecoder[SimpleDefinition.Object].widen
-    def getEncoder: Encoder[SimpleDefinition] = Encoder.instance {
-      case v: SimpleDefinition.StringT => deriveEncoder[SimpleDefinition.StringT].apply(v)
-      case v: SimpleDefinition.Number  => deriveEncoder[SimpleDefinition.Number].apply(v)
-      case v: SimpleDefinition.ArrayT  => deriveEncoder[SimpleDefinition.ArrayT].apply(v)
-      case v: SimpleDefinition.Object  => deriveEncoder[SimpleDefinition.Object].apply(v)
-    }
-
-    val dec = new Decoder[SimpleDefinition]:
-      override def apply(c: HCursor): Result[SimpleDefinition] =
-        common.decodeJson(c.value).flatMap(comn => transformCodec(comn)(c)(getDecoder(comn.`type`)).decodeJson(c.value))
-
-    val enc = new Encoder[SimpleDefinition]:
-      override def apply(a: SimpleDefinition): Json = getEncoder
-        .apply(a)
-        .mapObject(js =>
-          val common = js.apply("common").flatMap(_.asObject)
-          js.remove("common").deepMerge(common.getOrElse(JsonObject.empty))
-        )
-
-    Codec.from(
-      dec,
-      enc,
+    FlatteningAggregationCodec.flatteningAggregationCodec[SimpleDefinition, SimpleDefinition.RegularPropertyCommon](
+      "common"
     )
 
   type ReferenceOrSchema = Reference | SimpleDefinition
@@ -172,6 +170,30 @@ object SimpleDefinitionCodecs:
     case refProperty: Reference            => Encoder[Reference].apply(refProperty)
     case XOf(_, _, _)                      => ???
   }
+
+object FlatteningAggregationCodec:
+  def flatteningAggregationDecoder[CONTAINER: Decoder, CONTENT: Decoder: Encoder](
+      fieldName: String
+  ): Decoder[CONTAINER] =
+    summon[Decoder[CONTAINER]].prepare(_.withFocus(json =>
+      val content = summon[Decoder[CONTENT]].decodeJson(json)
+      json.mapObject(_.add(fieldName, content.map(_.asJson).getOrElse(Json.Null)))
+    ))
+
+  def flatteningAggregationEncoder[CONTAINER: Encoder](fieldName: String): Encoder[CONTAINER] =
+    summon[Encoder[CONTAINER]].mapJson(_.mapObject(js =>
+      val nestedJSO = js.apply(fieldName).flatMap(_.asObject).getOrElse(JsonObject.empty)
+      js
+        .remove(fieldName)
+        .deepMerge(nestedJSO)
+    ))
+
+  def flatteningAggregationCodec[CONTAINER: Decoder: Encoder, CONTENT: Decoder: Encoder](
+      fieldName: String
+  ): Codec[CONTAINER] = Codec.from(
+    flatteningAggregationDecoder[CONTAINER, CONTENT](fieldName),
+    flatteningAggregationEncoder[CONTAINER](fieldName),
+  )
 
 object EitherAuto:
   import io.circe.syntax.*
